@@ -1,0 +1,25 @@
+name: UpDownSelect
+
+channels:
+ - conda-forge
+ - bioconda
+ - defaults
+
+dependencies:
+  - prokka=1.14.6
+  - bakta=1.8.2
+  - parallel=20230722
+  - ppanggolin=1.2.105
+  - seqkit=2.5.1
+  - emboss=6.6.0
+  - mafft=7.520
+  - pal2nal=14.1
+  - fasttree=2.1.11
+  - paml=4.10.6
+  - matplotlib=3.8.0
+  - ipykernel=6.25.2
+  - nextflow=23.10.0
+  - liftoff=1.6.3
+  - pip
+  - pip:
+    - parnas==0.1.4
