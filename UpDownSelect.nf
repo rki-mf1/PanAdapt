@@ -35,7 +35,7 @@ process split_cds_1 {
     """
 }
 
-process liftoff{
+process liftoff {
     input:
     path genome
     val reference_annotation
@@ -47,8 +47,14 @@ process liftoff{
     script:
     """
     liftoff -db $reference_annotation -cds -o ${genome.baseName}.gff $genome $reference_sequence
+    
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/liftoff
+        cp ${genome.baseName}.gff $baseDir/debug/liftoff
+    fi
     """
 }
+
 
 process remove_nonsense_sequences{
     input:
@@ -170,6 +176,9 @@ process sort_families {
     """
     mkdir output
     seqkit sort $family > output/${family.name}
+    
+    mkdir -p $baseDir/debug/sorted_families
+    cp output/${family.name} $baseDir/debug/sorted_families
     """
 }
 
