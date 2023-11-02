@@ -1,11 +1,10 @@
-sc2_genomes = Channel.fromPath("../UpDownSelect_input/sc2_vaccinated.fasta")
-sample_size = Channel.value('5000')
-reference_sequence = Channel.value("../../../resources/NC_045512.2.fasta")
-reference_annotation = Channel.value("../../../resources/NC_045512.2.gff3_db")
-// sc2_reference = Channel.value("../../../resources/sc2_reference.gbk")
-downsample_size = Channel.value('25')
-codeml_template = Channel.value("../../../resources/codeml_template.ctl")
-codeml_models = Channel.from(['0','1','2','7','8'])
+sc2_genomes = Channel.fromPath(params.sc2_genomes)
+sample_size = Channel.value(params.sample_size)
+reference_sequence = Channel.value(params.reference_sequence)
+reference_annotation = Channel.value(params.reference_annotation)
+downsample_size = Channel.value(params.downsample_size)
+codeml_template = Channel.value(params.codeml_template)
+codeml_models = Channel.from(params.codeml_models)
 
 process get_sc2_sequence_sample {
     input:
@@ -18,7 +17,7 @@ process get_sc2_sequence_sample {
     script:
     """
     count=`grep -c '^>' $genomes`
-    python ../../../scripts/get_random_sequences.py -i $genomes -o random_sample.fasta -s \$count -n $sample_size
+    python $baseDir/scripts/get_random_sequences.py -i $genomes -o random_sample.fasta -s \$count -n $sample_size
     """
 }
 
@@ -49,10 +48,6 @@ process liftoff{
     """
     liftoff -db $reference_annotation -cds -o ${genome.baseName}.gff $genome $reference_sequence
     """
-
-    // grep -E '#|ID=gene' ${genome.baseName}.tmp | grep -v 'valid_ORF=False' > tmp.tmp
-    // sed -i 's/gene/CDS/' tmp.tmp
-    // cat tmp.tmp <(echo "##FASTA") $genome > ${genome.baseName}.gff
 }
 
 process remove_nonsense_sequences{
@@ -65,7 +60,7 @@ process remove_nonsense_sequences{
     script:
     """
     mkdir output
-    python ../../../scripts/remove_nonsense_sequences.py -i $annotation -o ${annotation.baseName}.tmp
+    python $baseDir/scripts/remove_nonsense_sequences.py -i $annotation -o ${annotation.baseName}.tmp
     cat ${annotation.baseName}.tmp <(echo "##FASTA") $genome > output/${annotation.name}
     """
 }
@@ -95,7 +90,7 @@ process remove_stop_codons {
     script:
     """
     mkdir output
-    python ../../../scripts/remove_stop_codons.py -i $ffn_file -o output/${ffn_file.name}
+    python $baseDir/scripts/remove_stop_codons.py -i $ffn_file -o output/${ffn_file.name}
     """
 }
 
@@ -124,7 +119,7 @@ process build_pangenome {
 
     script:
     """    
-    python ../../../scripts/build_ppanggolin_annotation_file.py -i $gff_files -o annotation.tmp
+    python $baseDir/scripts/build_ppanggolin_annotation_file.py -i $gff_files -o annotation.tmp
     ppanggolin annotate --cpu 12 --anno annotation.tmp --output pangenome
     ppanggolin cluster --cpu 12 -p pangenome/pangenome.h5
     ppanggolin graph --cpu 12 -p pangenome/pangenome.h5
@@ -160,7 +155,7 @@ process build_families {
     """
     mkdir output
     cat $split_cds_files > combined_cds.tmp
-    python ../../../scripts/build_families.py -m $pan_matrix -s combined_cds.tmp -o output
+    python $baseDir/scripts/build_families.py -m $pan_matrix -s combined_cds.tmp -o output
     """
 }
 
@@ -188,7 +183,7 @@ process filter_sequences_by_length {
     script:
     """
     mkdir output
-    python ../../../scripts/filter_sequences_by_length.py -i $family -o output/${family.baseName}.fasta
+    python $baseDir/scripts/filter_sequences_by_length.py -i $family -o output/${family.baseName}.fasta
     """
 }
 
@@ -203,7 +198,7 @@ process remove_duplicate_sequences {
     script:
     """
     mkdir output
-    python ../../../scripts/remove_duplicate_sequences.py -i $filtered_family -o output/${filtered_family.name} -j output/${filtered_family.getBaseName()}.json
+    python $baseDir/scripts/remove_duplicate_sequences.py -i $filtered_family -o output/${filtered_family.name} -j output/${filtered_family.getBaseName()}.json
     """
 }
 
@@ -333,7 +328,7 @@ process reduce_msa {
     """
     mkdir output
     if head -n 1 $newick_tree | grep -q '^#NEXUS'; then
-        python ../../../scripts/reduce_msa.py -i $msa -t $newick_tree -o output/${msa.name} -r output/${newick_tree.name}
+        python $baseDir/scripts/reduce_msa.py -i $msa -t $newick_tree -o output/${msa.name} -r output/${newick_tree.name}
     else
         cp $msa output/${msa.name}
         cp $newick_tree output/${newick_tree.name}
@@ -387,7 +382,7 @@ process compare_model_likelihood{
     def codeml_model_str = codeml_model.join(' ')
 
     """
-    python ../../../scripts/compare_model_likelihood2.py -l $lnL_str -p $np_str -m $codeml_model_str -g ${family.baseName}
+    python $baseDir/scripts/compare_model_likelihood2.py -l $lnL_str -p $np_str -m $codeml_model_str -g ${family.baseName}
     """
 }
 
@@ -417,7 +412,7 @@ process merge_results {
 
     script:
     """
-    python ../../../scripts/merge_results.py $pan_results $filtered_counts $model_comparison_file -o merged_results.tsv
+    python $baseDir/scripts/merge_results.py $pan_results $filtered_counts $model_comparison_file -o merged_results.tsv
     """
 }
 
@@ -432,7 +427,7 @@ process extract_beb_table {
     """
     mkdir output
     if [ "$codeml_model" == '8' ]; then 
-        python ../../../scripts/extract_beb_table.py -i $rst -o output/${codeml_output.baseName}.beb
+        python $baseDir/scripts/extract_beb_table.py -i $rst -o output/${codeml_output.baseName}.beb
     else 
         touch output/${codeml_output.baseName}.filter
     fi
@@ -443,6 +438,7 @@ workflow {
     random_sample = get_sc2_sequence_sample(sc2_genomes, sample_size)
     sc2_genomes = split_cds_1(random_sample)
     gffs_and_genomes = liftoff(sc2_genomes.flatten(), reference_annotation, reference_sequence)
+    gffs_and_genomes.view()
     nonsense_removed = remove_nonsense_sequences(gffs_and_genomes)
    (pan_matrix, pan_projections, ffn_files) = build_pangenome(nonsense_removed.collect())
     pan_results = extract_pangenome_data(pan_matrix)
