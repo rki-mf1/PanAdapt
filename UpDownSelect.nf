@@ -156,12 +156,13 @@ process build_families {
 
     output:
     path "output/*.fasta"
+    path "output/*.ref"
 
     script:
     """
     mkdir output
     cat $split_cds_files > combined_cds.tmp
-    python $baseDir/scripts/build_families.py -m $pan_matrix -s combined_cds.tmp -o output
+    python $baseDir/scripts/build_families.py -m $pan_matrix -s combined_cds.tmp -r ${params.ref_id} -o output
     """
 }
 
@@ -446,15 +447,20 @@ process extract_beb_table {
 workflow {
     random_sample = get_sc2_sequence_sample(sc2_genomes, sample_size)
     sc2_genomes = split_cds_1(random_sample)
+    sc2_genomes
+        .flatten()
+        .mix(reference_sequence)
+        .set{sc2_genomes}
     gffs_and_genomes = liftoff(sc2_genomes.flatten(), reference_annotation, reference_sequence)
     nonsense_removed = remove_nonsense_sequences(gffs_and_genomes)
    (pan_matrix, pan_projections, ffn_files) = build_pangenome(nonsense_removed.collect())
     pan_results = extract_pangenome_data(pan_matrix)
     ffn_stopless_files = remove_stop_codons(ffn_files)
     ffn_split_files = split_cds_2(ffn_stopless_files)
-    families = build_families(pan_matrix, ffn_split_files.collect())
+    (families, ref_seqs) = build_families(pan_matrix, ffn_split_files.collect())
     counter = { int i=0; return { item -> [++i, item] } }()
     families = families.flatten().map(counter)
+    ref_seqs = ref_seqs.flatten().map(counter)
     sorted_families = sort_families(families)
     filtered_families = filter_sequences_by_length(sorted_families)    
     (no_dups_families, dups_jsons) = remove_duplicate_sequences(filtered_families)
