@@ -438,7 +438,6 @@ workflow {
     random_sample = get_sc2_sequence_sample(sc2_genomes, sample_size)
     sc2_genomes = split_cds_1(random_sample)
     gffs_and_genomes = liftoff(sc2_genomes.flatten(), reference_annotation, reference_sequence)
-    gffs_and_genomes.view()
     nonsense_removed = remove_nonsense_sequences(gffs_and_genomes)
    (pan_matrix, pan_projections, ffn_files) = build_pangenome(nonsense_removed.collect())
     pan_results = extract_pangenome_data(pan_matrix)
@@ -484,5 +483,4 @@ workflow {
     beb_tables
         .filter { index, file -> file.name.endsWith('.beb') }
         .set{ beb_tables }
-    msa_codon_aware_families.view()
 }
