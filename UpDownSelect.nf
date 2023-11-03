@@ -444,6 +444,20 @@ process extract_beb_table {
     """
 }
 
+process add_reference_to_msa {
+    input:
+    tuple val(index), path(msa), path(tree),path(ref_seq)
+
+    output:
+    tuple val(index), path("output/${msa.name}")
+
+    script:
+    """
+    mkdir output
+    mafft --preservecase --add $ref_seq $msa > "output/${msa.name}"
+    """
+}
+
 workflow {
     random_sample = get_sc2_sequence_sample(sc2_genomes, sample_size)
     sc2_genomes = split_cds_1(random_sample)
@@ -460,7 +474,8 @@ workflow {
     (families, ref_seqs) = build_families(pan_matrix, ffn_split_files.collect())
     counter = { int i=0; return { item -> [++i, item] } }()
     families = families.flatten().map(counter)
-    ref_seqs = ref_seqs.flatten().map(counter)
+    counter2 = { int i=0; return { item -> [++i, item] } }()
+    ref_seqs = ref_seqs.flatten().map(counter2)
     sorted_families = sort_families(families)
     filtered_families = filter_sequences_by_length(sorted_families)    
     (no_dups_families, dups_jsons) = remove_duplicate_sequences(filtered_families)
@@ -475,10 +490,10 @@ workflow {
     msa_codon_aware_families = build_codon_aware_msa(joined_pla2nal)
     newick_trees = build_newick_tree(msa_codon_aware_families)
     downsampled_trees = downsample_newick_trees(newick_trees, downsample_size)
-    joined_codeml = msa_codon_aware_families.join(downsampled_trees)
-    joined_codeml = reduce_msa(joined_codeml)
-    joined_codeml = joined_codeml.combine(codeml_models)
-    codeml_results = run_codeml_model(joined_codeml, codeml_template)
+    msas_and_trees = msa_codon_aware_families.join(downsampled_trees)
+    reduced_msas_and_trees = reduce_msa(msas_and_trees)
+    codeml_inputs = reduced_msas_and_trees.combine(codeml_models)
+    codeml_results = run_codeml_model(codeml_inputs, codeml_template)
     codeml_parameters = extract_codeml_parameters(codeml_results)
     codeml_parameters
         .splitCsv(sep:',')
@@ -498,4 +513,6 @@ workflow {
     beb_tables
         .filter { index, file -> file.name.endsWith('.beb') }
         .set{ beb_tables }
+    msas_and_trees.join(ref_seqs).set{test}
+    ref_msa = add_reference_to_msa(test)
 }
