@@ -22,8 +22,9 @@ def build_per_site_table(msa_file, output_file, ref_id=None):
             if ref_id in identifier:
                 ref_index = idx
                 break
+        # If ref_id is not found, use the first sequence as the reference
         if ref_index is None:
-            raise ValueError(f"Reference ID containing {ref_id} not found in the MSA")
+            ref_index = 0
 
     with open(output_file, 'w') as out:
         # Write header

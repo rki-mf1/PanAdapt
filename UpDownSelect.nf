@@ -444,6 +444,11 @@ process merge_results {
     script:
     """
     python $baseDir/scripts/merge_results.py $pan_results $filtered_counts $model_comparison_file -o merged_results.tsv
+
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/merge_results
+        cp merged_results.tsv $baseDir/debug/merge_results
+    fi
     """
 }
 
@@ -462,6 +467,7 @@ process extract_beb_table {
     else 
         touch output/${codeml_output.baseName}.filter
     fi
+
     if ${params.debug}; then
         mkdir -p $baseDir/debug/extract_beb_table
         cp output/${codeml_output.baseName}.* $baseDir/debug/extract_beb_table
@@ -493,7 +499,7 @@ process add_reference_to_msa {
     """
 }
 
-process build_per_site_table {
+process initialize_per_site_table {
     input:
     tuple val(index), path(msa), path(tree), path(ref_seq)
 
@@ -504,10 +510,49 @@ process build_per_site_table {
     """
     echo 1
     cat $msa $ref_seq > ${msa.baseName}.tmp
-    python $baseDir/scripts/build_per_site_table.py -i ${msa.baseName}.tmp -r ${params.ref_id} -b $beb_table -o ${msa.baseName}.tsv
+    python $baseDir/scripts/initialize_per_site_table.py -i ${msa.baseName}.tmp -r ${params.ref_id} -o ${msa.baseName}.tsv
+    
     if ${params.debug}; then
-        mkdir -p $baseDir/debug/build_per_site_table
-        cp ${msa.baseName}.tsv $baseDir/debug/build_per_site_table
+        mkdir -p $baseDir/debug/initialize_per_site_table
+        cp ${msa.baseName}.tsv $baseDir/debug/initialize_per_site_table
+    fi
+    """
+}
+
+process join_per_site_and_beb {
+    input:
+    tuple val(index), path(per_site_table), path(beb_table)
+
+    output:
+    tuple val(index), path("output/${per_site_table.name}")
+
+    script:
+    """
+    mkdir output 
+    python $baseDir/scripts/join_per_site_and_beb.py -i $per_site_table -b $beb_table -o output/${per_site_table.name}
+    
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/join_per_site_and_beb
+        cp output/${per_site_table.name} $baseDir/debug/join_per_site_and_beb
+    fi
+    """
+}
+
+process visualize_beb {
+    input:
+    tuple val(index), path(per_site_table)
+
+    output:
+    tuple val(index), path("${per_site_table.baseName}.png")
+
+    script:
+    """
+    echo 15
+    python $baseDir/scripts/visualize_beb.py -i $per_site_table -o ${per_site_table.baseName}.png
+
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/visualize_beb
+        cp ${per_site_table.baseName}.png $baseDir/debug/visualize_beb
     fi
     """
 }
@@ -549,7 +594,7 @@ workflow {
     msas_and_trees = refless_msas.join(downsampled_trees)
     reduced_msas_and_trees = reduce_msa(msas_and_trees)
     reduced_msas_and_trees.join(aligned_refs).set{msas_and_aligned_refs}    
-    per_site_tables = build_per_site_table(msas_and_aligned_refs)
+    per_site_tables = initialize_per_site_table(msas_and_aligned_refs)
     codeml_inputs = reduced_msas_and_trees.combine(codeml_models)
     codeml_results = run_codeml_model(codeml_inputs, codeml_template)
     codeml_parameters = extract_codeml_parameters(codeml_results)
@@ -571,4 +616,7 @@ workflow {
     beb_tables
         .filter { index, file -> file.name.endsWith('.beb') }
         .set{ beb_tables }
+    per_site_tables = per_site_tables.join(beb_tables)
+    per_site_tables = join_per_site_and_beb(per_site_tables)
+    beb_visualizations = visualize_beb(per_site_tables)
 }
