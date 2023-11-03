@@ -215,21 +215,22 @@ process remove_duplicate_sequences {
 
 process count_filtered_sequences {
     input:
-    tuple val(index), path(no_dups_familie)
+    tuple val(index), path(no_dups_family), path(ref_seq)
 
     output:
-    tuple val(index), path("output/${no_dups_familie.baseName}.*")
+    tuple val(index), path("output/${no_dups_family.baseName}.*")
     path ".command.out" 
 
     script:
     """
     mkdir output
-    count=`grep -c '^>' $no_dups_familie`
-    echo -e "${no_dups_familie.baseName}\t\$count"
+    count=`grep -c '^>' $no_dups_family`
+    echo -e "${no_dups_family.baseName}\t\$count"
     if [ \$count -ge 2 ]; then 
-        cp $no_dups_familie output/${no_dups_familie.name}
+        cp $no_dups_family output/${no_dups_family.name}
+        cat $ref_seq >> output/${no_dups_family.name}
     else 
-        touch output/${no_dups_familie.baseName}.filter
+        touch output/${no_dups_family.baseName}.filter
     fi
     """
 }
@@ -289,6 +290,26 @@ process build_codon_aware_msa{
     """
     mkdir output
     pal2nal.pl -output fasta $msa $family > output/${family.name}
+    """
+}
+
+process split_ref_from_msa{
+    input:
+    tuple val(index), path(msa)
+
+    output:
+    tuple val(index), path("output/${msa.name}")
+    tuple val(index), path("output/${msa.baseName}.ref")
+
+    """
+    mkdir output
+    python $baseDir/scripts/split_ref_from_msa.py -i $msa -r ${params.ref_id} -o output/${msa.name} -u output/${msa.baseName}.ref
+
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/split_ref_from_msa
+        cp output/${msa.name} $baseDir/debug/split_ref_from_msa
+        cp output/${msa.baseName}.ref $baseDir/debug/split_ref_from_msa
+    fi
     """
 }
 
@@ -441,12 +462,16 @@ process extract_beb_table {
     else 
         touch output/${codeml_output.baseName}.filter
     fi
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/extract_beb_table
+        cp output/${codeml_output.baseName}.* $baseDir/debug/extract_beb_table
+    fi
     """
 }
 
 process add_reference_to_msa {
     input:
-    tuple val(index), path(msa), path(tree),path(ref_seq)
+    tuple val(index), path(msa), path(tree), path(ref_seq)
 
     output:
     tuple val(index), path("output/${msa.name}")
@@ -454,7 +479,36 @@ process add_reference_to_msa {
     script:
     """
     mkdir output
-    mafft --preservecase --add $ref_seq $msa > "output/${msa.name}"
+    sed 's/"-"/""/g' $msa > 1.tmp
+    cat $ref_seq >> 1.tmp
+    transeq -sequence 1.tmp -outseq 2.tmp
+    sed -i 's/_1\$//' 2.tmp
+    mafft --auto --preservecase 2.tmp > 3.tmp
+    pal2nal.pl -output fasta 3.tmp 1.tmp > output/${msa.name}
+
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/add_reference_to_msa
+        cp output/${msa.name} $baseDir/debug/add_reference_to_msa
+    fi
+    """
+}
+
+process build_per_site_table {
+    input:
+    tuple val(index), path(msa), path(tree), path(ref_seq)
+
+    output:
+    tuple val(index), path("${msa.baseName}.tsv")
+
+    script:
+    """
+    echo 1
+    cat $msa $ref_seq > ${msa.baseName}.tmp
+    python $baseDir/scripts/build_per_site_table.py -i ${msa.baseName}.tmp -r ${params.ref_id} -b $beb_table -o ${msa.baseName}.tsv
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/build_per_site_table
+        cp ${msa.baseName}.tsv $baseDir/debug/build_per_site_table
+    fi
     """
 }
 
@@ -479,7 +533,8 @@ workflow {
     sorted_families = sort_families(families)
     filtered_families = filter_sequences_by_length(sorted_families)    
     (no_dups_families, dups_jsons) = remove_duplicate_sequences(filtered_families)
-    (min_count_families, seq_counts) = count_filtered_sequences(no_dups_families)
+    families_with_refs = no_dups_families.join(ref_seqs)
+    (min_count_families, seq_counts) = count_filtered_sequences(families_with_refs)
     filtered_counts = write_filtered_counts_file(seq_counts.collect())
     min_count_families
         .filter { index, file -> file.name.endsWith('.fasta') }
@@ -488,10 +543,13 @@ workflow {
     msa_families = build_msa(translated_families)
     joined_pla2nal = msa_families.join(min_count_families)
     msa_codon_aware_families = build_codon_aware_msa(joined_pla2nal)
-    newick_trees = build_newick_tree(msa_codon_aware_families)
+    (refless_msas, aligned_refs) = split_ref_from_msa(msa_codon_aware_families)
+    newick_trees = build_newick_tree(refless_msas)
     downsampled_trees = downsample_newick_trees(newick_trees, downsample_size)
-    msas_and_trees = msa_codon_aware_families.join(downsampled_trees)
+    msas_and_trees = refless_msas.join(downsampled_trees)
     reduced_msas_and_trees = reduce_msa(msas_and_trees)
+    reduced_msas_and_trees.join(aligned_refs).set{msas_and_aligned_refs}    
+    per_site_tables = build_per_site_table(msas_and_aligned_refs)
     codeml_inputs = reduced_msas_and_trees.combine(codeml_models)
     codeml_results = run_codeml_model(codeml_inputs, codeml_template)
     codeml_parameters = extract_codeml_parameters(codeml_results)
@@ -513,6 +571,4 @@ workflow {
     beb_tables
         .filter { index, file -> file.name.endsWith('.beb') }
         .set{ beb_tables }
-    msas_and_trees.join(ref_seqs).set{test}
-    ref_msa = add_reference_to_msa(test)
 }
