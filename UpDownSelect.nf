@@ -1,25 +1,11 @@
 sc2_genomes = Channel.fromPath(params.sc2_genomes)
-sample_size = Channel.value(params.sample_size)
 reference_sequence = Channel.value(params.reference_sequence)
 reference_annotation = Channel.value(params.reference_annotation)
 downsample_size = Channel.value(params.downsample_size)
 codeml_template = Channel.value(params.codeml_template)
 codeml_models = Channel.from(params.codeml_models)
 
-process get_sc2_sequence_sample {
-    input:
-    path genomes
-    val sample_size
-
-    output:
-    path "random_sample.fasta"
-
-    script:
-    """
-    count=`grep -c '^>' $genomes`
-    python $baseDir/scripts/get_random_sequences.py -i $genomes -o random_sample.fasta -s \$count -n $sample_size
-    """
-}
+sc2_genomes_test = Channel.value(params.sc2_genomes)
 
 process split_cds_1 {
     input:
@@ -68,6 +54,11 @@ process remove_nonsense_sequences{
     mkdir output
     python $baseDir/scripts/remove_nonsense_sequences.py -i $annotation -o ${annotation.baseName}.tmp
     cat ${annotation.baseName}.tmp <(echo "##FASTA") $genome > output/${annotation.name}
+
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/remove_nonsense_sequences
+        cp output/${annotation.name} $baseDir/debug/remove_nonsense_sequences
+    fi
     """
 }
 
@@ -163,6 +154,12 @@ process build_families {
     mkdir output
     cat $split_cds_files > combined_cds.tmp
     python $baseDir/scripts/build_families.py -m $pan_matrix -s combined_cds.tmp -r ${params.ref_id} -o output
+
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/build_families
+        cp output/*.fasta $baseDir/debug/build_families
+        cp output/*.ref $baseDir/debug/build_families
+    fi
     """
 }
 
@@ -287,9 +284,34 @@ process build_codon_aware_msa{
     output:
     tuple val(index), path("output/${family.name}")
 
+    script:
     """
     mkdir output
     pal2nal.pl -output fasta $msa $family > output/${family.name}
+
+    if ${params.debug}; then
+    mkdir -p $baseDir/debug/build_codon_aware_msa
+    cp output/${family.name} $baseDir/debug/build_codon_aware_msa
+    fi
+    """
+}
+
+process mask_ambiguities_with_consensus{
+    input:
+    tuple val(index), path(msa)
+
+    output:
+    tuple val(index), path("output/${msa.name}")
+
+    script:
+    """
+    mkdir output
+    python $baseDir/scripts/test.py -i $msa -o output/${msa.name}
+
+    if ${params.debug}; then
+    mkdir -p $baseDir/debug/mask_ambiguities_with_consensus
+    cp output/${msa.name} $baseDir/debug/mask_ambiguities_with_consensus
+    fi
     """
 }
 
@@ -342,7 +364,7 @@ process downsample_newick_trees {
     if [ "\$seq_count" -le "$downsample_size" ]; then
         cp $newick_tree output/${newick_tree.name}
     else
-        parnas -t $newick_tree -n $downsample_size --subtree output/${newick_tree.name}
+        parnas -t $newick_tree --cover --radius 0.001 --subtree output/${newick_tree.name}
         sed -i "s/'//g" output/${newick_tree.name}
     fi
     """
@@ -363,6 +385,11 @@ process reduce_msa {
     else
         cp $msa output/${msa.name}
         cp $newick_tree output/${newick_tree.name}
+    fi
+
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/reduce_msa
+        cp output/${msa.name} $baseDir/debug/reduce_msa
     fi
     """
 }
@@ -557,14 +584,35 @@ process visualize_beb {
     """
 }
 
+process extract_positively_selected_sites {
+    input:
+    tuple val(index), path(per_site_table)
+    path sc2_genomes
+
+    output:
+    tuple val(index), path("output/${per_site_table.name}")
+
+    script:
+    """
+    mkdir output
+    python $baseDir/scripts/extract_positively_selected_sites.py -i $per_site_table -o output/${per_site_table.name}
+    mkdir -p $baseDir/ps_sites/${sc2_genomes.baseName}
+    cp output/${per_site_table.name} $baseDir/ps_sites/${sc2_genomes.baseName}
+    
+    if ${params.debug}; then
+        mkdir -p $baseDir/debug/extract_positively_selected_sites
+        cp output/${per_site_table.name} $baseDir/debug/extract_positively_selected_sites
+    fi
+    """
+}
+
 workflow {
-    random_sample = get_sc2_sequence_sample(sc2_genomes, sample_size)
-    sc2_genomes = split_cds_1(random_sample)
-    sc2_genomes
+    random_sample = split_cds_1(sc2_genomes)
+    random_sample
         .flatten()
         .mix(reference_sequence)
-        .set{sc2_genomes}
-    gffs_and_genomes = liftoff(sc2_genomes.flatten(), reference_annotation, reference_sequence)
+        .set{random_sample}
+    gffs_and_genomes = liftoff(random_sample.flatten(), reference_annotation, reference_sequence)
     nonsense_removed = remove_nonsense_sequences(gffs_and_genomes)
    (pan_matrix, pan_projections, ffn_files) = build_pangenome(nonsense_removed.collect())
     pan_results = extract_pangenome_data(pan_matrix)
@@ -588,6 +636,7 @@ workflow {
     msa_families = build_msa(translated_families)
     joined_pla2nal = msa_families.join(min_count_families)
     msa_codon_aware_families = build_codon_aware_msa(joined_pla2nal)
+    msa_codon_aware_families = mask_ambiguities_with_consensus(msa_codon_aware_families)
     (refless_msas, aligned_refs) = split_ref_from_msa(msa_codon_aware_families)
     newick_trees = build_newick_tree(refless_msas)
     downsampled_trees = downsample_newick_trees(newick_trees, downsample_size)
@@ -616,7 +665,9 @@ workflow {
     beb_tables
         .filter { index, file -> file.name.endsWith('.beb') }
         .set{ beb_tables }
+    beb_tables.view()
     per_site_tables = per_site_tables.join(beb_tables)
     per_site_tables = join_per_site_and_beb(per_site_tables)
     beb_visualizations = visualize_beb(per_site_tables)
+    ps_site_tables = extract_positively_selected_sites(per_site_tables, sc2_genomes_test)
 }

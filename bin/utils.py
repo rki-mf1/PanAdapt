@@ -1,6 +1,5 @@
 import random
 
-
 def read_fasta(infile):
     with open(infile, "r") as file:
         identifier = None

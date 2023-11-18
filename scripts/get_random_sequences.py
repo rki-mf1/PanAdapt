@@ -18,9 +18,9 @@ def main():
     random_sequences = get_random_sequences(args.infile, args.size, args.number)
     
     with open(args.outfile, "w") as out_file:
-        for i, (identifier, sequence) in enumerate(random_sequences):
+        for identifier, sequence in random_sequences:
             sanitized_sequence = sanitize_sequence(sequence)
-            write_fasta(i+1, sanitized_sequence, out_file)
+            write_fasta(identifier, sanitized_sequence, out_file)
 
 
 if __name__ == "__main__":

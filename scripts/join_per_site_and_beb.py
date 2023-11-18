@@ -7,7 +7,7 @@ def join_tables(per_site_file, beb_file, output_file):
     beb_df = pd.read_csv(beb_file, sep='\t', index_col=0)
 
     # Select only the desired columns from the beb table
-    beb_df = beb_df[['Postmean_W', 'Postmean_W_Error']]
+    beb_df = beb_df[['Class_11_Prob', 'Expected_Class', 'Postmean_W', 'Postmean_W_Error']]
 
     # Merge the tables on the index (position)
     merged_df = per_site_df.join(beb_df, how='left')

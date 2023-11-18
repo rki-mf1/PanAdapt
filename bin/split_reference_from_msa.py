@@ -1,15 +1,14 @@
+#!/usr/bin/env python
 import argparse
 from utils import read_fasta, write_fasta
 
-def split_ref_from_msa(input_file, ref_id, output_file, ref_output_file):
-    with open(output_file, 'w') as outfile, \
-         open(ref_output_file, 'w') as ref_outfile:
-        for identifier, sequence in read_fasta(input_file):
-            if ref_id in identifier:
+def split_reference_from_msa(args):
+    with open(args.output, 'w') as outfile, open(args.ref_output, 'w') as ref_outfile:
+        for identifier, sequence in read_fasta(args.input):
+            if args.ref_id in identifier:
                 write_fasta(identifier, sequence, ref_outfile)
             else:
                 write_fasta(identifier, sequence, outfile)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Split reference sequence from MSA based on ref_id")
@@ -19,5 +18,4 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--ref_output", required=True, help="Path to the output file containing the reference sequence")
 
     args = parser.parse_args()
-
-    split_ref_from_msa(args.input, args.ref_id, args.output, args.ref_output)
+    split_reference_from_msa(args)

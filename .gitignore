@@ -2,4 +2,6 @@
 work/
 .nextflow.log*
 scripts/__pycache__/
-debug/
+results/
+ps_sites/
+bin/__pycache__/
