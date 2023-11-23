@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 import argparse
 from utils import read_fasta, write_fasta
+import re
 
 def get_taxlabels_from_newick(newick_tree_file):
     with open(newick_tree_file, 'r') as file:
         newick_tree = file.read().strip()
-        return [label.strip().replace("'", "") for label in newick_tree.split('(')[1].split(')')[0].split(',')]
+        labels = re.findall(r'[\w-]+_filtered_CDS_\d+', newick_tree)
+        return labels
 
 def main():
     parser = argparse.ArgumentParser(description="Reduce MSA based on tax labels in Newick tree.")
@@ -15,11 +17,8 @@ def main():
     args = parser.parse_args()
 
     taxlabels = get_taxlabels_from_newick(args.tree)
-    print(taxlabels)
-
     with open(args.outfile, 'w') as outfile:
         for identifier, sequence in read_fasta(args.infile):
-            print(identifier)
             if identifier in taxlabels:
                 write_fasta(identifier, sequence, outfile)
 

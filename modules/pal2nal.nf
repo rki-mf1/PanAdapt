@@ -1,5 +1,5 @@
 process pal2nal {
-    publishDir "${params.output}/pal2nal", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/pal2nal", mode: params.publish_dir_mode
 
     input:
     tuple val(index), path(gene_family_msa), path(gene_family)

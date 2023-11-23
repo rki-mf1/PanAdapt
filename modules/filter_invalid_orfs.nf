@@ -1,5 +1,5 @@
 process filter_invalid_orfs {
-    publishDir "${params.output}/filter_invalid_orfs/${gff.baseName}", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/filter_invalid_orfs/${gff.baseName}", mode: params.publish_dir_mode
 
     input:
     path gff

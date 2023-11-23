@@ -1,5 +1,5 @@
 process mafft {
-    publishDir "${params.output}/mafft", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/mafft", mode: params.publish_dir_mode
 
     input:
     path gene_family

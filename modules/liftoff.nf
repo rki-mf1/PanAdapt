@@ -1,5 +1,5 @@
 process liftoff {
-    publishDir "${params.output}/liftoff/${genome_fasta.baseName}", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/liftoff/${genome_fasta.baseName}", mode: params.publish_dir_mode
     scratch true
     
     input:

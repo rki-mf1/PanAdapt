@@ -1,5 +1,5 @@
 process ppanggolin {
-    publishDir "${params.output}/ppanggolin", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/ppanggolin", mode: params.publish_dir_mode
 
     input:
     path gff_files

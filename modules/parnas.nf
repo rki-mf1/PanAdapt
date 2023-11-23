@@ -1,5 +1,5 @@
 process parnas {
-    publishDir "${params.output}/parnas", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/parnas", mode: params.publish_dir_mode
 
     input:
     tuple val(index), path(newick_tree)

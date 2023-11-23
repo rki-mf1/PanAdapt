@@ -1,5 +1,5 @@
 process fasttree {
-    publishDir "${params.output}/fasttree", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/fasttree", mode: params.publish_dir_mode
 
     input:
     tuple val(index), path(msa)

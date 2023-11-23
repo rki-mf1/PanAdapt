@@ -2,6 +2,8 @@ input_genomes = Channel.fromPath(params.input_genomes)
 reference_fasta = Channel.value(params.reference_fasta)
 reference_gff = Channel.value(params.reference_gff)
 
+params.publish_path = "results/${file(params.input_genomes).getBaseName()}"
+
 include {seqkit_split} from './modules/seqkit_split.nf'
 include {liftoff} from './modules/liftoff.nf'
 include {filter_invalid_orfs} from './modules/filter_invalid_orfs.nf'
@@ -17,9 +19,15 @@ include {pal2nal} from './modules/pal2nal.nf'
 include {split_reference_from_msa} from './modules/split_reference_from_msa.nf'
 include {fasttree} from './modules/fasttree.nf'
 include {parnas} from './modules/parnas.nf'
-include {nexus_to_newick} from './modules/nexus_to_newick.nf'
+include {filter_reduced_tree} from './modules/filter_reduced_tree.nf'
 include {reduce_msa} from './modules/reduce_msa.nf'
-// include {codeml} from './modules/codeml.nf'
+include {codeml} from './modules/codeml.nf'
+include {extract_codeml_parameters} from './modules/extract_codeml_parameters.nf'
+include {compare_codeml_models} from './modules/compare_codeml_models.nf'
+include {combine_codeml_comparisons} from './modules/combine_codeml_comparisons.nf'
+include {extract_codeml_beb} from './modules/extract_codeml_beb.nf'
+include {build_site_table} from './modules/build_site_table.nf'
+include {build_site_beb_table} from './modules/build_site_beb_table.nf'
 
 workflow{
     split_genomes = seqkit_split(params.input_genomes)
@@ -44,10 +52,34 @@ workflow{
     (msa_no_reference, aligned_reference) = split_reference_from_msa(gene_families_codon_aware_msa)
     newick_tree = fasttree(msa_no_reference)
     reduced_tree = parnas(newick_tree)
-    reduced_newick_tree = nexus_to_newick(reduced_tree)
-    reduced_msa = reduce_msa(msa_no_reference.join(reduced_newick_tree))
-    // codeml_input = reduced_msa.join(reduced_newick_tree).combine(params.codeml_models)
-    // codeml_input.view()
+    reduced_tree_filtered = filter_reduced_tree(reduced_tree)
+    reduced_tree_filtered
+        .filter{index, file -> file.name.endsWith('.filtered')}
+        .set{reduced_tree_filtered}
+    reduced_msa = reduce_msa(msa_no_reference.join(reduced_tree_filtered))
+    codeml_input = reduced_msa.join(reduced_tree_filtered).combine(params.codeml_models)
+    (codeml_txt, codeml_rst) = codeml(codeml_input)
+    codeml_parameters = extract_codeml_parameters(codeml_txt)
+    codeml_parameters
+        .splitCsv(sep:',')
+        .map { items -> 
+            return [items[0],
+            items[1].toDouble(),
+            items[2].toInteger(),
+            items[3].toInteger()]
+        }
+        .groupTuple()
+        .set{codeml_parameters}
+    codeml_comparison = compare_codeml_models(codeml_parameters)
+    codeml_comparison_file = combine_codeml_comparisons(codeml_comparison.collect())
+    codeml_beb = extract_codeml_beb(codeml_rst)
+    codeml_beb
+        .filter { index, file -> file.name.endsWith('.beb') }
+        .set{ codeml_beb }
 
-    // ppanggolin_results = extract_ppanggolin_results(matrix_csv)
+
+
+    site_table = build_site_table(reduced_msa.join(aligned_reference))
+    site_beb_table = build_site_beb_table(site_table.join(codeml_beb))
+    ppanggolin_results = extract_ppanggolin_results(matrix_csv)
 }

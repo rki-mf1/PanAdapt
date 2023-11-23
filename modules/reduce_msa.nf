@@ -1,5 +1,5 @@
 process reduce_msa {
-    publishDir "${params.output}/reduce_msa", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/reduce_msa", mode: params.publish_dir_mode
 
     input:
     tuple val(index), path(msa), path(newick_tree)

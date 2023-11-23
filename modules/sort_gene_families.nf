@@ -1,5 +1,5 @@
 process sort_gene_families {
-    publishDir "${params.output}/sort_gene_families", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/sort_gene_families", mode: params.publish_dir_mode
     input:
     path gene_family
 

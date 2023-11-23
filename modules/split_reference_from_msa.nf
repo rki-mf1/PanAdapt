@@ -1,5 +1,5 @@
 process split_reference_from_msa{
-    publishDir "${params.output}/split_reference_from_msa", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/split_reference_from_msa", mode: params.publish_dir_mode
 
     input:
     tuple val(index), path(msa)
