@@ -1,3 +1,4 @@
+.vscode/
 .nextflow/
 work/
 .nextflow.log*
@@ -5,3 +6,4 @@ scripts/__pycache__/
 results/
 ps_sites/
 bin/__pycache__/
+visualizations/

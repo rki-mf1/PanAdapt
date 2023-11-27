@@ -20,7 +20,10 @@ def remove_nonsense_sequences(input_file, output_file):
                 valid_orf = False
 
             if valid_orf and 'ID=cds' in line:
-                outfile.write(line)
+                split_line = line.split('\t')
+                complete_frame = (int(split_line[4]) - int(split_line[3]) + 1) % 3 == 0
+                if complete_frame:
+                    outfile.write(line)
             elif line.startswith('#'):
                 outfile.write(line)
 

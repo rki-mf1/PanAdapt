@@ -43,7 +43,7 @@ def build_per_site_table(msa_file, output_file, ref_id=None):
                 ref_codon = codons[ref_index]
                 if ref_codon != '---':
                     ref_pos += 1
-                out.write(f"{(pos//3)+1}\t{ref_pos}\t{ref_codon}")
+                out.write(f"{(pos//3)}\t{ref_pos}\t{ref_codon}")
             else:
                 out.write(f"{(pos//3)+1}\t{ref_pos}")
             out.write("\t" + "\t".join(codons) + "\n")

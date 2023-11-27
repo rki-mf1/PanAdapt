@@ -28,6 +28,10 @@ include {combine_codeml_comparisons} from './modules/combine_codeml_comparisons.
 include {extract_codeml_beb} from './modules/extract_codeml_beb.nf'
 include {build_site_table} from './modules/build_site_table.nf'
 include {build_site_beb_table} from './modules/build_site_beb_table.nf'
+include {fubar} from './modules/fubar.nf'
+include {build_site_fubar_table} from './modules/build_site_fubar_table.nf'
+include {mask_ambiguities} from './modules/mask_ambiguities.nf'
+include {filter_min_seq_count} from './modules/filter_min_seq_count.nf'
 
 workflow{
     split_genomes = seqkit_split(params.input_genomes)
@@ -39,47 +43,56 @@ workflow{
     gene_families = build_gene_families(matrix_csv, all_genes_no_stops)
     gene_families_sorted = sort_gene_families(gene_families.flatten())
     (gene_families_without_duplicates, duplicate_map) = remove_duplicate_sequences(gene_families_sorted)
-    gene_families_translated = translate_gene_families(gene_families_without_duplicates)
+
+    gene_families_min_count = filter_min_seq_count(gene_families_without_duplicates)
+    gene_families_min_count
+        .filter{file -> file.name.endsWith('.filtered')}
+        .set{gene_families_min_count}
+
+    gene_families_translated = translate_gene_families(gene_families_min_count)
     gene_families_msa = mafft(gene_families_translated)
-    gene_families_without_duplicates
+    gene_families_min_count
         .map{file->tuple(file.simpleName, file)}
-        .set{gene_families_without_duplicates_indexed}
+        .set{gene_families_min_count_indexed}
     gene_families_msa
         .map{file->tuple(file.simpleName, file)}
         .set{gene_families_msa_indexed}
-    pal2nal_input = gene_families_msa_indexed.join(gene_families_without_duplicates_indexed)
+    pal2nal_input = gene_families_msa_indexed.join(gene_families_min_count_indexed)
     gene_families_codon_aware_msa = pal2nal(pal2nal_input)
     (msa_no_reference, aligned_reference) = split_reference_from_msa(gene_families_codon_aware_msa)
-    newick_tree = fasttree(msa_no_reference)
-    reduced_tree = parnas(newick_tree)
-    reduced_tree_filtered = filter_reduced_tree(reduced_tree)
-    reduced_tree_filtered
-        .filter{index, file -> file.name.endsWith('.filtered')}
-        .set{reduced_tree_filtered}
-    reduced_msa = reduce_msa(msa_no_reference.join(reduced_tree_filtered))
-    codeml_input = reduced_msa.join(reduced_tree_filtered).combine(params.codeml_models)
-    (codeml_txt, codeml_rst) = codeml(codeml_input)
-    codeml_parameters = extract_codeml_parameters(codeml_txt)
-    codeml_parameters
-        .splitCsv(sep:',')
-        .map { items -> 
-            return [items[0],
-            items[1].toDouble(),
-            items[2].toInteger(),
-            items[3].toInteger()]
-        }
-        .groupTuple()
-        .set{codeml_parameters}
-    codeml_comparison = compare_codeml_models(codeml_parameters)
-    codeml_comparison_file = combine_codeml_comparisons(codeml_comparison.collect())
-    codeml_beb = extract_codeml_beb(codeml_rst)
-    codeml_beb
-        .filter { index, file -> file.name.endsWith('.beb') }
-        .set{ codeml_beb }
+    masked_msa = mask_ambiguities(msa_no_reference)
+    newick_tree = fasttree(masked_msa)
+    // reduced_tree = parnas(newick_tree)
+    // reduced_tree_filtered = filter_reduced_tree(reduced_tree)
+    // reduced_tree_filtered
+    //     .filter{index, file -> file.name.endsWith('.filtered')}
+    //     .set{reduced_tree_filtered}
+    // reduced_msa = reduce_msa(msa_no_reference.join(reduced_tree_filtered))
+    fubar_json = fubar(masked_msa.join(newick_tree))
+    site_table = build_site_table(masked_msa.join(aligned_reference))
+    site_fubar_table = build_site_fubar_table(site_table.join(fubar_json))
 
 
 
-    site_table = build_site_table(reduced_msa.join(aligned_reference))
-    site_beb_table = build_site_beb_table(site_table.join(codeml_beb))
+    // codeml_input = reduced_msa.join(reduced_tree_filtered).combine(params.codeml_models)
+    // (codeml_txt, codeml_rst) = codeml(codeml_input)
+    // codeml_parameters = extract_codeml_parameters(codeml_txt)
+    // codeml_parameters
+    //     .splitCsv(sep:',')
+    //     .map { items -> 
+    //         return [items[0],
+    //         items[1].toDouble(),
+    //         items[2].toInteger(),
+    //         items[3].toInteger()]
+    //     }
+    //     .groupTuple()
+    //     .set{codeml_parameters}
+    // codeml_comparison = compare_codeml_models(codeml_parameters)
+    // codeml_comparison_file = combine_codeml_comparisons(codeml_comparison.collect())
+    // codeml_beb = extract_codeml_beb(codeml_rst)
+    // codeml_beb
+    //     .filter { index, file -> file.name.endsWith('.beb') }
+    //     .set{ codeml_beb }
+    // site_beb_table = build_site_beb_table(site_table.join(codeml_beb))
     ppanggolin_results = extract_ppanggolin_results(matrix_csv)
 }
