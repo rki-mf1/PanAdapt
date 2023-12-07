@@ -7,3 +7,6 @@ results/
 ps_sites/
 bin/__pycache__/
 visualizations/
+ngo/
+spike_fubar_old.tsv
+spike_fubar.tsv
