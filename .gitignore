@@ -10,3 +10,4 @@ visualizations/
 ngo/
 spike_fubar_old.tsv
 spike_fubar.tsv
+input/complete.*
