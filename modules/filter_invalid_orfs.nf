@@ -5,10 +5,10 @@ process filter_invalid_orfs {
     path gff
 
     output:
-    path "${gff.baseName}_filtered.gff"
+    path "${gff.name}_filtered"
 
     script:
     """
-    filter_invalid_orfs.py -i $gff -o ${gff.baseName}_filtered.gff
+    filter_invalid_orfs.py -i $gff -o ${gff.name}_filtered
     """
 }

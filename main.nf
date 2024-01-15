@@ -32,6 +32,11 @@ include {fubar} from './modules/fubar.nf'
 include {build_site_fubar_table} from './modules/build_site_fubar_table.nf'
 include {mask_ambiguities} from './modules/mask_ambiguities.nf'
 include {filter_min_seq_count} from './modules/filter_min_seq_count.nf'
+include {remove_duplicate_sequences_2} from './modules/remove_duplicate_sequences_2.nf'
+include {restore_duplicate_sequences} from './modules/restore_duplicate_sequences.nf'
+include {restore_duplicate_sequences_2} from './modules/restore_duplicate_sequences_2.nf'
+include {filter_min_seq_count_2} from './modules/filter_min_seq_count_2.nf'
+include {calculate_shannon_entropy} from './modules/calculate_shannon_entropy.nf'
 
 workflow{
     split_genomes = seqkit_split(params.input_genomes)
@@ -39,10 +44,11 @@ workflow{
     annotated_genomes = liftoff(combined_genomes, reference_fasta, reference_gff)
     filtered_annotations = filter_invalid_orfs(annotated_genomes)
     (matrix_csv, all_genes_fasta) = ppanggolin(filtered_annotations.collect())
+    ppanggolin_results = extract_ppanggolin_results(matrix_csv)
     all_genes_no_stops = remove_stop_codons(all_genes_fasta)
     gene_families = build_gene_families(matrix_csv, all_genes_no_stops)
-    gene_families_sorted = sort_gene_families(gene_families.flatten())
-    (gene_families_without_duplicates, duplicate_map) = remove_duplicate_sequences(gene_families_sorted)
+    // gene_families_sorted = sort_gene_families(gene_families.flatten())
+    (gene_families_without_duplicates, duplicate_map) = remove_duplicate_sequences(gene_families.flatten())
 
     gene_families_min_count = filter_min_seq_count(gene_families_without_duplicates)
     gene_families_min_count
@@ -61,16 +67,21 @@ workflow{
     gene_families_codon_aware_msa = pal2nal(pal2nal_input)
     (msa_no_reference, aligned_reference) = split_reference_from_msa(gene_families_codon_aware_msa)
     masked_msa = mask_ambiguities(msa_no_reference)
-    newick_tree = fasttree(masked_msa)
-    // reduced_tree = parnas(newick_tree)
-    // reduced_tree_filtered = filter_reduced_tree(reduced_tree)
-    // reduced_tree_filtered
-    //     .filter{index, file -> file.name.endsWith('.filtered')}
-    //     .set{reduced_tree_filtered}
-    // reduced_msa = reduce_msa(msa_no_reference.join(reduced_tree_filtered))
-    fubar_json = fubar(masked_msa.join(newick_tree))
-    site_table = build_site_table(masked_msa.join(aligned_reference))
+    (msa_without_duplicates, msa_duplicate_map) = remove_duplicate_sequences_2(masked_msa)
+    msa_min_count = filter_min_seq_count_2(msa_without_duplicates)
+    msa_min_count
+        .filter{index,file -> file.name.endsWith('.filtered')}
+        .set{msa_min_count}    
+    newick_tree = fasttree(msa_min_count)
+    fubar_json = fubar(msa_min_count.join(newick_tree))    
+    duplicate_map
+        .map{file->tuple(file.simpleName, file)}
+        .set{duplicate_map_indexed}
+    msa_duplicates_restored = restore_duplicate_sequences(masked_msa.join(duplicate_map_indexed))
+    site_table = build_site_table(msa_duplicates_restored.join(aligned_reference))
     site_fubar_table = build_site_fubar_table(site_table.join(fubar_json))
+    site_shannon_table = calculate_shannon_entropy(site_fubar_table)
+
 
 
 
@@ -94,5 +105,12 @@ workflow{
     //     .filter { index, file -> file.name.endsWith('.beb') }
     //     .set{ codeml_beb }
     // site_beb_table = build_site_beb_table(site_table.join(codeml_beb))
-    ppanggolin_results = extract_ppanggolin_results(matrix_csv)
+
+    // reduced_tree = parnas(newick_tree)
+    // reduced_tree_filtered = filter_reduced_tree(reduced_tree)
+    // reduced_tree_filtered
+    //     .filter{index, file -> file.name.endsWith('.filtered')}
+    //     .set{reduced_tree_filtered}
+    // reduced_msa = reduce_msa(msa_no_reference.join(reduced_tree_filtered))
+    
 }

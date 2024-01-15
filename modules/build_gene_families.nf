@@ -10,6 +10,6 @@ process build_gene_families {
 
     script:
     """
-    build_gene_families.py -m $pan_matrix -s $fasta -r ${params.ref_id}
+    build_gene_families.py -m $pan_matrix -s $fasta
     """
 }

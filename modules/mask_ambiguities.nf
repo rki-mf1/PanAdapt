@@ -1,5 +1,5 @@
 process mask_ambiguities {
-    publishDir "${params.publish_path}/mask_abmiguities", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/mask_ambiguities", mode: params.publish_dir_mode
 
     input:
     tuple val(index), path(msa)
