@@ -20,6 +20,10 @@ def transpose(infile):
                 else:
                     count[item] = 1
         transpose_dict[i] = list(count.items())
+
+    for key, value in transpose_dict.items():
+        if len(value) == 1 and value[0][0] == "---":
+            transpose_dict[key] = [("", value[0][1])]
     return transpose_dict
 
 
@@ -37,7 +41,7 @@ def replace_with_consensus(msa_file, consensus_seq, out_msa):
         for identifier, seq in msa:
             codons = re.findall(r"...", seq)
             for i, codon in enumerate(codons):
-                if not all(n in "ACGT-" for n in codon):
+                if not all(n in "ACGT" for n in codon):
                     codons[i] = consensus_seq[i]  # Corrected this line
             updated_seq = "".join(codons)  # Join the codons back into a string
             write_fasta(identifier, updated_seq, outfile)  # Write the updated sequence

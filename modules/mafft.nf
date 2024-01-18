@@ -9,6 +9,6 @@ process mafft {
 
     script:
     """
-    mafft --auto --preservecase $gene_family > ${gene_family.simpleName}.msa
+    mafft --thread -1 --auto --preservecase $gene_family > ${gene_family.simpleName}.msa
     """
 }

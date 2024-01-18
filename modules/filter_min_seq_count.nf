@@ -9,7 +9,7 @@ process filter_min_seq_count {
 
     script:
     """
-    seq_count=\$(grep -c '>' $gene_family)
+    seq_count=\$(grep -c '>' $gene_family || true)
     if [ "\$seq_count" -gt 2 ]; then
         cp $gene_family ${gene_family.simpleName}.filtered
     else

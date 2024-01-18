@@ -37,6 +37,7 @@ include {restore_duplicate_sequences} from './modules/restore_duplicate_sequence
 include {restore_duplicate_sequences_2} from './modules/restore_duplicate_sequences_2.nf'
 include {filter_min_seq_count_2} from './modules/filter_min_seq_count_2.nf'
 include {calculate_shannon_entropy} from './modules/calculate_shannon_entropy.nf'
+include {filter_ambiguous_sequences} from './modules/filter_ambiguous_sequences.nf'
 
 workflow{
     split_genomes = seqkit_split(params.input_genomes)
@@ -47,9 +48,9 @@ workflow{
     ppanggolin_results = extract_ppanggolin_results(matrix_csv)
     all_genes_no_stops = remove_stop_codons(all_genes_fasta)
     gene_families = build_gene_families(matrix_csv, all_genes_no_stops)
+    gene_families_filtered = filter_ambiguous_sequences(gene_families.flatten())
     // gene_families_sorted = sort_gene_families(gene_families.flatten())
-    (gene_families_without_duplicates, duplicate_map) = remove_duplicate_sequences(gene_families.flatten())
-
+    (gene_families_without_duplicates, duplicate_map) = remove_duplicate_sequences(gene_families_filtered)
     gene_families_min_count = filter_min_seq_count(gene_families_without_duplicates)
     gene_families_min_count
         .filter{file -> file.name.endsWith('.filtered')}
@@ -65,9 +66,9 @@ workflow{
         .set{gene_families_msa_indexed}
     pal2nal_input = gene_families_msa_indexed.join(gene_families_min_count_indexed)
     gene_families_codon_aware_msa = pal2nal(pal2nal_input)
-    (msa_no_reference, aligned_reference) = split_reference_from_msa(gene_families_codon_aware_msa)
-    masked_msa = mask_ambiguities(msa_no_reference)
-    (msa_without_duplicates, msa_duplicate_map) = remove_duplicate_sequences_2(masked_msa)
+    masked_msa = mask_ambiguities(gene_families_codon_aware_msa)
+    (msa_no_reference, aligned_reference) = split_reference_from_msa(masked_msa)
+    (msa_without_duplicates, msa_duplicate_map) = remove_duplicate_sequences_2(msa_no_reference)
     msa_min_count = filter_min_seq_count_2(msa_without_duplicates)
     msa_min_count
         .filter{index,file -> file.name.endsWith('.filtered')}
@@ -77,7 +78,7 @@ workflow{
     duplicate_map
         .map{file->tuple(file.simpleName, file)}
         .set{duplicate_map_indexed}
-    msa_duplicates_restored = restore_duplicate_sequences(masked_msa.join(duplicate_map_indexed))
+    msa_duplicates_restored = restore_duplicate_sequences(msa_no_reference.join(duplicate_map_indexed))
     site_table = build_site_table(msa_duplicates_restored.join(aligned_reference))
     site_fubar_table = build_site_fubar_table(site_table.join(fubar_json))
     site_shannon_table = calculate_shannon_entropy(site_fubar_table)

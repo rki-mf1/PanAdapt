@@ -4,6 +4,7 @@ import hashlib
 import json
 from utils import read_fasta, write_fasta
 
+
 def remove_duplicate_sequences(infile, outfile_fasta, outfile_json, reference_id):
     hash_dict = {}
     ref_sequence_written = False
@@ -23,19 +24,37 @@ def remove_duplicate_sequences(infile, outfile_fasta, outfile_json, reference_id
             else:
                 hash_dict[hash_digest].append(identifier)
 
-    duplicates_dict = {idents[0]: idents[1:] for idents in hash_dict.values() if len(idents) > 1}
-    
+    duplicates_dict = {
+        idents[0]: idents[1:] for idents in hash_dict.values() if len(idents) > 1
+    }
+
     with open(outfile_json, "w") as outfile:
         json.dump(duplicates_dict, outfile)
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Remove duplicate sequences from a fasta file.")
+    parser = argparse.ArgumentParser(
+        description="Remove duplicate sequences from a fasta file."
+    )
     parser.add_argument("-i", "--infile", required=True, help="Input fasta file.")
-    parser.add_argument("-o", "--outfile", required=True, help="Output fasta file without duplicates.")
-    parser.add_argument("-j", "--json", required=True, help="Output json file mapping original identifiers to duplicates.")
-    parser.add_argument("-r", "--reference", required=True, help="Part of the identifier of the reference sequence.")
+    parser.add_argument(
+        "-o", "--outfile", required=True, help="Output fasta file without duplicates."
+    )
+    parser.add_argument(
+        "-j",
+        "--json",
+        required=True,
+        help="Output json file mapping original identifiers to duplicates.",
+    )
+    parser.add_argument(
+        "-r",
+        "--reference",
+        required=True,
+        help="Part of the identifier of the reference sequence.",
+    )
     args = parser.parse_args()
     remove_duplicate_sequences(args.infile, args.outfile, args.json, args.reference)
+
 
 if __name__ == "__main__":
     main()
