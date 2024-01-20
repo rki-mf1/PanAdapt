@@ -1,4 +1,5 @@
 process pal2nal {
+    label 'generic_small'
     publishDir "${params.publish_path}/pal2nal", mode: params.publish_dir_mode
 
     input:

@@ -1,4 +1,5 @@
 process seqkit_split {
+    label 'generic_large'
     publishDir "${params.publish_path}/seqkit_split/${fasta.baseName}", mode: params.publish_dir_mode
     
     input:
@@ -9,6 +10,6 @@ process seqkit_split {
 
     script:
     """
-    seqkit split -i --by-id-prefix '' $fasta
+    seqkit split -j $task.cpus -i --by-id-prefix '' $fasta
     """
 }

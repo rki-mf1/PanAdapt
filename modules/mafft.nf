@@ -1,4 +1,5 @@
 process mafft {
+    label 'generic_large'
     publishDir "${params.publish_path}/mafft", mode: params.publish_dir_mode
 
     input:
@@ -9,6 +10,6 @@ process mafft {
 
     script:
     """
-    mafft --thread -1 --auto --preservecase $gene_family > ${gene_family.simpleName}.msa
+    mafft --thread $task.cpus --auto --preservecase $gene_family > ${gene_family.simpleName}.msa
     """
 }

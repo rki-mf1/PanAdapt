@@ -1,4 +1,5 @@
 process remove_stop_codons {
+    label 'generic_small'
     publishDir "${params.publish_path}/remove_stop_codons", mode: params.publish_dir_mode
 
     input:

@@ -1,4 +1,5 @@
 process mask_ambiguities {
+    label 'generic_small'
     publishDir "${params.publish_path}/mask_ambiguities", mode: params.publish_dir_mode
 
     input:

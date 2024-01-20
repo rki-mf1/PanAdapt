@@ -1,4 +1,5 @@
 process build_site_fubar_table {
+    label 'generic_small'
     publishDir "${params.publish_path}/build_site_fubar_table/", mode: params.publish_dir_mode
     
     input:

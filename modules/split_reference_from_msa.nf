@@ -1,4 +1,5 @@
 process split_reference_from_msa{
+    label 'generic_small'
     publishDir "${params.publish_path}/split_reference_from_msa", mode: params.publish_dir_mode
 
     input:

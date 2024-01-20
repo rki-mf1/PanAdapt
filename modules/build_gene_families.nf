@@ -1,4 +1,5 @@
 process build_gene_families {
+    label 'generic_small'
     publishDir "${params.publish_path}/build_gene_families/", mode: params.publish_dir_mode
 
     input:

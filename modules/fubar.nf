@@ -1,4 +1,5 @@
 process fubar {
+    label 'generic_medium'
     publishDir "${params.publish_path}/fubar/", mode: params.publish_dir_mode
     
     input:
