@@ -1,5 +1,5 @@
 process ppanggolin {
-    label 'generic_large'
+    label 'ppanggolin'
     publishDir "${params.publish_path}/ppanggolin", mode: params.publish_dir_mode
 
     input:

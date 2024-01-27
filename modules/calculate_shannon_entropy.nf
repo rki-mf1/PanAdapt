@@ -1,5 +1,5 @@
 process calculate_shannon_entropy {
-    label 'generic_small'
+    label 'python'
     publishDir "${params.publish_path}/calculate_shannon_entropy/", mode: params.publish_dir_mode
     
     input:

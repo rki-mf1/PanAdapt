@@ -1,5 +1,5 @@
 process seqkit_split {
-    label 'generic_large'
+    label 'seqkit_split'
     publishDir "${params.publish_path}/seqkit_split/${fasta.baseName}", mode: params.publish_dir_mode
     
     input:

@@ -1,5 +1,5 @@
 process remove_duplicate_sequences_2 {
-    label 'generic_small'
+    label 'python'
     publishDir "${params.publish_path}/remove_duplicate_sequences_2", mode: params.publish_dir_mode
 
     input:

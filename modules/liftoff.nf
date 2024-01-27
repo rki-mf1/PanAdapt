@@ -1,5 +1,5 @@
 process liftoff {
-    label 'generic_small'
+    label 'liftoff'
     publishDir "${params.publish_path}/liftoff/${genome_fasta.baseName}", mode: params.publish_dir_mode
     scratch true
     

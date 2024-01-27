@@ -1,5 +1,5 @@
 process filter_ambiguous_sequences {
-    label 'generic_small'
+    label 'python'
     publishDir "${params.publish_path}/filter_ambiguous_sequences", mode: params.publish_dir_mode
 
     input:

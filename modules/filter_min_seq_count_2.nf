@@ -1,5 +1,5 @@
 process filter_min_seq_count_2 {
-    label 'generic_small'
+    label 'python'
     publishDir "${params.publish_path}/filter_min_seq_count_2", mode: params.publish_dir_mode
 
     input:

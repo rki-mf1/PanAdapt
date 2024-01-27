@@ -1,5 +1,5 @@
 process extract_ppanggolin_results {
-    label 'generic_small'
+    label 'python'
     publishDir "${params.publish_path}/extract_ppanggolin_results/", mode: params.publish_dir_mode
 
     input:

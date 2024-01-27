@@ -1,5 +1,5 @@
 process restore_duplicate_sequences {
-    label 'generic_small'
+    label 'python'
     publishDir "${params.publish_path}/restore_duplicate_sequences", mode: params.publish_dir_mode
 
     input:

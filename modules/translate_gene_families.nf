@@ -1,5 +1,5 @@
 process translate_gene_families {
-    label 'generic_small'
+    label 'translate_gene_families'
     publishDir "${params.publish_path}/translate_gene_families", mode: params.publish_dir_mode
 
     input:

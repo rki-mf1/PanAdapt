@@ -1,5 +1,5 @@
 process build_site_table {
-    label 'generic_small'
+    label 'python'
     publishDir "${params.publish_path}/build_site_table", mode: params.publish_dir_mode
     scratch true
     
