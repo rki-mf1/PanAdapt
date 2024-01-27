@@ -1,0 +1,9 @@
+name: PanAdapt
+
+channels:
+ - conda-forge
+ - bioconda
+ - defaults
+
+dependencies:
+  - hyphy=2.5.50

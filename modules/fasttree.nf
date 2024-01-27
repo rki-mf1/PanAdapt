@@ -1,5 +1,5 @@
 process fasttree {
-    label 'generic_small'
+    label 'fasttree'
     publishDir "${params.publish_path}/fasttree", mode: params.publish_dir_mode
 
     input:

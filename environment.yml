@@ -1,4 +1,4 @@
-name: UpDownSelect
+name: PanAdapt
 
 channels:
  - conda-forge
@@ -6,16 +6,16 @@ channels:
  - defaults
 
 dependencies:
-  - ppanggolin=1.2.105
-  - seqkit=2.5.1
-  - emboss=6.6.0
-  - mafft=7.520
-  - pal2nal=14.1
-  - fasttree=2.1.11
-  - matplotlib=3.8.0
-  - ipykernel=6.25.2
+  # - ppanggolin=1.2.105
+  # - seqkit=2.5.1
+  # - emboss=6.6.0
+  # - mafft=7.520
+  # - pal2nal=14.1
+  # - fasttree=2.1.11
+  # - matplotlib=3.8.0
+  # - ipykernel=6.25.2
   - nextflow=23.10.0
-  - liftoff=1.6.3
-  - hyphy=2.5.50
-  - adjusttext=0.7.3.1
-  - sed=4.8
+  # - liftoff=1.6.3
+  # - hyphy=2.5.50
+  # - adjusttext=0.7.3.1
+  # - sed=4.8
