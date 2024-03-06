@@ -10,6 +10,6 @@ process fubar {
 
     script:
     """
-    hyphy fubar --alignment $msa --tree $newick_tree --output ${index}.json
+    hyphy fubar --alignment $msa --tree $newick_tree --output ${index}.json --kill-zero-lengths No
     """
 }
