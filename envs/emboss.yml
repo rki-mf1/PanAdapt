@@ -7,3 +7,4 @@ channels:
 
 dependencies:
   - emboss=6.6.0
+  - sed=4.8

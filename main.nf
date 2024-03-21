@@ -3,10 +3,9 @@ reference_fasta = Channel.value(params.reference_fasta)
 reference_gff = Channel.value(params.reference_gff)
 
 params.publish_path = "results/${file(params.input_genomes).getBaseName()}"
-// params.publish_path = "results/test"
-
 
 include {seqkit_split} from './modules/seqkit_split.nf'
+include {liftoff_reference} from './modules/liftoff_reference.nf'
 include {liftoff} from './modules/liftoff.nf'
 include {filter_invalid_orfs} from './modules/filter_invalid_orfs.nf'
 include {ppanggolin} from './modules/ppanggolin.nf'
@@ -90,9 +89,10 @@ include {busted} from './modules/busted.nf'
 
 workflow {
     split_genomes = seqkit_split(params.input_genomes)
-    combined_genomes = split_genomes.flatten().mix(reference_fasta)
-    annotated_genomes = liftoff(combined_genomes, reference_fasta, reference_gff)
-    filtered_annotations = filter_invalid_orfs(annotated_genomes)
+    (annotated_reference, reference_db) = liftoff_reference(reference_fasta, reference_gff)
+    annotated_genomes = liftoff(split_genomes.flatten(), reference_fasta, reference_db)
+    combined_annotations = annotated_genomes.mix(annotated_reference)
+    filtered_annotations = filter_invalid_orfs(combined_annotations)
     (matrix_csv, all_genes_fasta) = ppanggolin(filtered_annotations.collect())
     ppanggolin_results = extract_ppanggolin_results(matrix_csv)
     all_genes_no_stops = remove_stop_codons(all_genes_fasta)
