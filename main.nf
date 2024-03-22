@@ -1,4 +1,4 @@
-input_genomes = Channel.fromPath(params.input_genomes)
+input_genomes = Channel.fromPath("${params.input_genomes}/*")
 reference_fasta = Channel.value(params.reference_fasta)
 reference_gff = Channel.value(params.reference_gff)
 
@@ -88,9 +88,8 @@ include {busted} from './modules/busted.nf'
 
 
 workflow {
-    split_genomes = seqkit_split(params.input_genomes)
     (annotated_reference, reference_db) = liftoff_reference(reference_fasta, reference_gff)
-    annotated_genomes = liftoff(split_genomes.flatten(), reference_fasta, reference_db)
+    annotated_genomes = liftoff(input_genomes, reference_fasta, reference_db)
     combined_annotations = annotated_genomes.mix(annotated_reference)
     filtered_annotations = filter_invalid_orfs(combined_annotations)
     (matrix_csv, all_genes_fasta) = ppanggolin(filtered_annotations.collect())
