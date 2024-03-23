@@ -41,7 +41,6 @@ include {calculate_shannon_entropy} from './modules/calculate_shannon_entropy.nf
 include {filter_ambiguous_sequences} from './modules/filter_ambiguous_sequences.nf'
 include {bakta} from './modules/bakta.nf'
 include {build_refless_site_table} from './modules/build_refless_site_table.nf'
-include {ppanggolin_v2} from './modules/ppanggolin_v2.nf'
 include {busted} from './modules/busted.nf'
 
 // workflow {

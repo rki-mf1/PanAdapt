@@ -6,4 +6,4 @@ channels:
  - defaults
 
 dependencies:
-  - ppanggolin=1.2.105
+  - ppanggolin=2.0.5
