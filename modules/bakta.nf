@@ -1,9 +1,10 @@
-process bakta {
+ process bakta {
     label 'bakta'
     publishDir "${params.publish_path}/bakta/${genome_fasta.baseName}", mode: params.publish_dir_mode
 
     input:
     path genome_fasta
+    val bakta_db
 
     output:
     path "${genome_fasta.baseName}.gff3"
@@ -11,7 +12,7 @@ process bakta {
     script:
     """
     bakta \
-    --db ${params.bakta_db} \
+    --db $bakta_db \
     --threads $task.cpus \
     --skip-trna \
     --skip-tmrna \
