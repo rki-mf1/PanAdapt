@@ -13,7 +13,7 @@ def main():
         file_paths = infile.read().splitlines()
 
     with open(args.output, "w") as out_file:
-        for file_path in file_paths:
+        for file_path in sorted(file_paths):
             file_name = os.path.basename(file_path)
             base_name = os.path.splitext(file_name)[0]
             out_file.write(f"{base_name}\t{file_path}\n")

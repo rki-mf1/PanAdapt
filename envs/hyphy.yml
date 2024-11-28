@@ -1,4 +1,4 @@
-name: PanAdapt
+name: hyphy
 
 channels:
  - conda-forge

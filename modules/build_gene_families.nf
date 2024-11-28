@@ -7,10 +7,13 @@ process build_gene_families {
     path fasta
 
     output:
-    path "*.fasta"
+    path "*.fna"
+    path "*.faa"
+    path "ambig_filter_counts.tsv"
+    path "stop_filter_counts.tsv"
 
     script:
     """
-    build_gene_families.py -m $pan_matrix -s $fasta
+    build_gene_families.py -m $pan_matrix -f $fasta -a 0.1
     """
 }

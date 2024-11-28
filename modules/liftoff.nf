@@ -1,23 +1,27 @@
 process liftoff {
     label 'liftoff'
-    publishDir "${params.publish_path}/liftoff/${genome_fasta.baseName}", mode: params.publish_dir_mode
+    publishDir "${params.publish_path}/liftoff/", mode: params.publish_dir_mode
     scratch true
     
     input:
-    path genome_fasta
+    val reference_db
     val reference_fasta
-    val reference_gff
+    path genome_fasta
+    
 
     output:
-    path "${genome_fasta.baseName}.gff"
+    path "${genome_fasta.baseName}.gff_polished"
 
     script:
     """
-    liftoff -db $reference_gff \
+    liftoff -db $reference_db \
+            -o ${genome_fasta.baseName}.gff \
             -cds \
-            -o ${genome_fasta.baseName}.tmp \
+            -polish \
             $genome_fasta \
             $reference_fasta
-    cat ${genome_fasta.baseName}.tmp <(echo "##FASTA") $genome_fasta > ${genome_fasta.baseName}.gff
+
+    format_annotation.py -a ${genome_fasta.baseName}.gff_polished -f $genome_fasta
+    sed -i '0,/CDS/{/CDS/d;}' ${genome_fasta.baseName}.gff_polished
     """
 }

@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 import argparse
-import fasta_utils
+import gffutils
+
+
+def build_liftoff_db(gff_file, db):
+    gffutils.create_db(gff_file, db, merge_strategy="create_unique", force=True)
 
 
 def main():
@@ -8,10 +12,7 @@ def main():
     parser.add_argument("-i", "--input", required=True)
     parser.add_argument("-o", "--output", required=True)
     args = parser.parse_args()
-
-    fasta = fasta_utils.read_fasta(args.input)
-    fasta.mask_ambiguities()
-    fasta.to_file(args.output)
+    build_liftoff_db(args.input, args.output)
 
 
 if __name__ == "__main__":

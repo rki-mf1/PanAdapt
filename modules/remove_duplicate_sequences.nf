@@ -3,14 +3,14 @@ process remove_duplicate_sequences {
     publishDir "${params.publish_path}/remove_duplicate_sequences", mode: params.publish_dir_mode
 
     input:
-    path gene_family
+    tuple val(index), path(msa)
 
     output:
-    path "${gene_family.name}.no_dups"
-    path "${gene_family.name}.json"
+    tuple val(index), path("${msa.name}.no_dups") optional true
+    path "${index}_dups_filter_counts.tsv"
 
     script:
     """
-    remove_duplicate_sequences.py -i $gene_family -o ${gene_family.name}.no_dups -j ${gene_family.name}.json -r ${params.ref_id} 
+    remove_duplicate_sequences.py -i $msa -o ${msa.name}.no_dups -g $index
     """
 }
