@@ -1,10 +1,11 @@
 from __future__ import annotations
-from random import choices, randint
-from re import findall
+from random import choices, randint, sample
+from re import findall, sub
 from textwrap import wrap
 from itertools import groupby
 from os.path import isdir
 from statistics import multimode
+from typing import Iterator
 
 
 class Sequence:
@@ -119,6 +120,9 @@ class Sequence:
 
     def contains_internal_stop(self) -> bool:
         return "*" in self.protein.rstrip("*")
+
+    def sanitize(self) -> None:
+        self.nucleotide = sub(r"[^ACGTN]", "N", self.nucleotide)
 
 
 class Fasta:
@@ -277,16 +281,68 @@ def read_fasta_sample(file_path: str, n: int) -> Fasta:
     return sample_fasta
 
 
-def main():
-    # fasta = read_fasta("complete.fasta")
-    sample = read_fasta_sample("complete.fasta", 25)
-    for record in sample:
-        record.nucleotide = record.nucleotide.replace("-", "N")
-    sample.to_files("sc2_samples")
-    # fasta.to_tsv("transpose.tsv", 3)
+def parse_fasta(file_path: str) -> Iterator[Sequence]:
+    with open(file_path, "r") as infile:
+        current_record = None
+        for line in infile:
+            line = line.strip()
+            if line.startswith(">"):
+                if current_record:
+                    yield current_record
+                identifier = line[1:].strip()
+                current_record = Sequence(identifier=identifier)
+            else:
+                if current_record is not None:
+                    current_record.nucleotide += line
+        if current_record:
+            yield current_record
 
-    # fasta.mask_ambiguities()
-    # fasta.to_file("masked.fasta")
+
+def filter_fasta(
+    infile_path: str, outfile_path: str, filter_list: list[str], sanitize: bool = False
+) -> None:
+    with open(outfile_path, "w") as outfile:
+        for record in parse_fasta(infile_path):
+            if record.identifier in filter_list:
+                if sanitize:
+                    record.sanitize()
+                print(record.to_string(), file=outfile)
+
+
+def get_fasta_identifiers(file_path: str) -> list[str]:
+    return [record.identifier for record in parse_fasta(file_path)]
+
+
+def split_fasta(infile_path: str, outfile_dir: str, sanitize: bool = False) -> None:
+    for record in parse_fasta(infile_path):
+        if sanitize:
+            record.sanitize()
+        output_file = f"{outfile_dir}/{record.identifier}.fasta"
+        with open(output_file, "w") as outfile:
+            print(record.to_string(), file=outfile)
+
+
+def random(infile_path: str, oufile_path: str, n: int, sanitize: bool = False) -> None:
+    id_list = get_fasta_identifiers(infile_path)
+    filter_list = sample(id_list, n)
+    filter_fasta(infile_path, oufile_path, filter_list, sanitize=sanitize)
+
+
+def head(infile_path: str, oufile_path: str, n: int, sanitize: bool = False) -> None:
+    id_list = get_fasta_identifiers(infile_path)
+    filter_list = id_list[:n]
+    filter_fasta(infile_path, oufile_path, filter_list, sanitize=sanitize)
+
+
+def tail(infile_path: str, oufile_path: str, n: int, sanitize: bool = False) -> None:
+    id_list = get_fasta_identifiers(infile_path)
+    filter_list = id_list[-n:]
+    filter_fasta(infile_path, oufile_path, filter_list, sanitize=sanitize)
+
+
+def main():
+    head("data/SC2/complete.fasta", "test.fasta", 90, sanitize=True)
+    split_fasta("test.fasta", "pupsi", sanitize=False)
 
 
 if __name__ == "__main__":
