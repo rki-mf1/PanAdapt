@@ -3,7 +3,7 @@ name: hyphy
 channels:
  - conda-forge
  - bioconda
- - defaults
+ - nodefaults
 
 dependencies:
   - hyphy=2.5.50

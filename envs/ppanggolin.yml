@@ -3,7 +3,7 @@ name: ppanggolin
 channels:
  - conda-forge
  - bioconda
- - defaults
+ - nodefaults
 
 dependencies:
-  - ppanggolin=2.1.2
+  - ppanggolin=2.2.1

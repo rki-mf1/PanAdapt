@@ -3,7 +3,7 @@ name: fasttree
 channels:
  - conda-forge
  - bioconda
- - defaults
+ - nodefaults
 
 dependencies:
   - fasttree=2.1.11

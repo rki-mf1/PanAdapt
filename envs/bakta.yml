@@ -3,7 +3,7 @@ name: bakta
 channels:
  - conda-forge
  - bioconda
- - defaults
+ - nodefaults
 
 dependencies:
   - bakta=1.9.4

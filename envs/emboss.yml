@@ -3,7 +3,7 @@ name: emboss
 channels:
  - conda-forge
  - bioconda
- - defaults
+ - nodefaults
 
 dependencies:
   - emboss=6.6.0

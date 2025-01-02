@@ -3,8 +3,8 @@ name: liftoff
 channels:
  - conda-forge
  - bioconda
- - defaults
+ - nodefaults
 
 dependencies:
   - liftoff=1.6.3
-  - sed=4.8
+  - sed
