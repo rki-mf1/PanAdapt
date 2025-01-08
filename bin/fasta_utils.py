@@ -6,6 +6,9 @@ from itertools import groupby
 from os.path import isdir
 from statistics import multimode
 from typing import Iterator
+import pandas as pd
+from collections import Counter
+from math import log2
 
 
 class Sequence:
@@ -102,8 +105,17 @@ class Sequence:
     def random(self, length: int) -> None:
         self.nucleotide = "".join(choices("ACGT", k=length))
 
-    def to_kmers(self, k: int = 3) -> list[str]:
-        return findall("." * k, self.nucleotide)
+    def to_kmers(self, k: int = 3, mode: str = "nucleotide") -> list[str]:
+        if mode == "nucleotide":
+            return findall("." * k, self.nucleotide)
+        elif mode == "protein":
+            if not self.protein:
+                self.translate()
+            return findall("." * k, self.protein)
+        else:
+            raise ValueError(
+                f"Invalid mode {mode}. Mode must be either 'nucleotide' or 'protein'."
+            )
 
     def translate(self, drop_terminal_stop: bool = False) -> None:
         codons = self.to_kmers()
@@ -129,7 +141,7 @@ class Fasta:
 
     def __init__(self, count: int = 0) -> None:
         self.records = [Sequence(identifier=f"Sequence_{i}") for i in range(count)]
-        self.consensus = ""
+        self.consensus = Sequence()
 
     def __iter__(self):
         return iter(self.records)
@@ -174,14 +186,23 @@ class Fasta:
         for record in self.records:
             record.translate(drop_terminal_stop)
 
+    def shannon_entropy(self, k=3, mode: str = "nucleotide") -> list[float]:
+        shannon_list = []
+        transposed_kmers = self.transpose(k=k, mode=mode)
+        for kmer_list in transposed_kmers:
+            unique_kmers = Counter(kmer_list)
+            ratios = [v / len(kmer_list) for k, v in unique_kmers.items()]
+            shannon_list.append(-sum(r * log2(r) for r in ratios if r > 0))
+        return shannon_list
+
     def remove_duplicate_sequences(self) -> None:
         unique_records: dict[str, Sequence] = {}
         for record in self.records:
             unique_records[record.nucleotide] = record
         self.records = list(unique_records.values())
 
-    def transpose(self, k: int) -> list[list[str]]:
-        kmers_list = [record.to_kmers(k) for record in self.records]
+    def transpose(self, k: int, mode: str = "nucleotide") -> list[list[str]]:
+        kmers_list = [record.to_kmers(k=k, mode=mode) for record in self.records]
         return list(zip(*kmers_list))
 
     def to_tsv(self, file_path: str, k: int) -> None:
@@ -191,13 +212,26 @@ class Fasta:
                 codons.insert(0, record.identifier)
                 print("\t".join(codons), file=outfile)
 
+    def to_dataframe(
+        self, file_path: str = "", k: int = 3, mode: str = "nucleotide"
+    ) -> pd.DataFrame | None:
+        kmers = {
+            record.identifier: record.to_kmers(k=k, mode=mode)
+            for record in self.records
+        }
+        df = pd.DataFrame(kmers)
+        if file_path:
+            df.to_csv(file_path, sep="\t")
+        else:
+            return df
+
     def get_consensus(self) -> None:
         self.transposed_single = self.transpose(1)
         consensus_list: list[str] = []
         for nuc_list in self.transposed_single:
             valid_nucs = [nuc for nuc in nuc_list if nuc in "ACGT-"]
             consensus_list.append(multimode(valid_nucs)[0])
-        self.consensus = "".join(consensus_list)
+        self.consensus = Sequence("Consensus", nucleotide="".join(consensus_list))
 
     def mask_ambiguities(self) -> None:
         if not self.consensus:
@@ -205,7 +239,7 @@ class Fasta:
         for record in self.records:
             mask = (
                 n2 if n1 not in "ACGT-" else n1
-                for n1, n2 in zip(record.nucleotide, self.consensus)
+                for n1, n2 in zip(record.nucleotide, self.consensus.nucleotide)
             )
             record.nucleotide = "".join(mask)
 
@@ -341,8 +375,10 @@ def tail(infile_path: str, oufile_path: str, n: int, sanitize: bool = False) -> 
 
 
 def main():
-    head("data/SC2/complete.fasta", "test.fasta", 90, sanitize=True)
-    split_fasta("test.fasta", "pupsi", sanitize=False)
+    fasta = read_fasta(
+        "/Users/stefanfrank/Projects/PanAdapt/results/mask_ambiguities/surface_glycoprotein_0.pal2nal.no_ref.masked"
+    )
+    print(fasta.shannon_entropy())
 
 
 if __name__ == "__main__":

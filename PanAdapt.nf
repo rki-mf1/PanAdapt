@@ -14,17 +14,17 @@ include {filter_ambiguous_sequences} from './modules/filter_ambiguous_sequences.
 include {remove_duplicate_sequences} from './modules/remove_duplicate_sequences.nf'
 include {merge_dups_filter} from './modules/merge_dups_filter.nf'
 include {filter_min_seq_count} from './modules/filter_min_seq_count.nf'
-include {translate_gene_families} from './modules/translate_gene_families.nf'
 include {mafft} from './modules/mafft.nf'
 include {pal2nal} from './modules/pal2nal.nf'
 include {mask_ambiguities} from './modules/mask_ambiguities.nf'
 include {split_reference_from_msa} from './modules/split_reference_from_msa.nf'
-include {filter_min_seq_count_2} from './modules/filter_min_seq_count_2.nf'
 include {fasttree} from './modules/fasttree.nf'
 include {fubar} from './modules/fubar.nf'
 include {extract_fubar} from './modules/extract_fubar.nf'
 include {merge_fubar_stats} from './modules/merge_fubar_stats.nf'
 include {merge_gene_stats} from './modules/merge_gene_stats.nf'
+include {build_site_stats} from './modules/build_site_stats.nf'
+include {merge_reference} from './modules/merge_reference.nf'
 
 bakta_db = Channel.value(params.bakta_db)
 workflow {
@@ -64,4 +64,8 @@ workflow {
     (fubar_per_site, fubar_stats) = extract_fubar(fubar_json)
     merged_fubar_stats = merge_fubar_stats(fubar_stats.collect())
     merged_gene_stats = merge_gene_stats(reformatted_matrix, ambig_filter_counts, stop_filter_counts, merged_dups_filter, merged_fubar_stats)
+    site_stats = build_site_stats(masked_msa.join(fubar_per_site))
+    if (params.reference_fasta && params.reference_gff) {
+        site_stats = merge_reference(site_stats.join(aligned_reference))
+    }
 }   

@@ -8,7 +8,7 @@ process ppanggolin {
     output:
     file "pangenome/matrix.csv"
     file "all_genes/all_genes.fna"
-    file "all_prots/all_protein_genes.fna"
+    file "all_prots/all_protein_genes.faa"
 
     script:
     """
