@@ -1,7 +1,3 @@
-sample_genomes = Channel.fromPath("$params.input_dir/*.fasta")
-reference_genome = Channel.value(params.reference_fasta)
-reference_gff = Channel.value(params.reference_gff)
-
 include {build_liftoff_db} from './modules/build_liftoff_db.nf'
 include {liftoff} from './modules/liftoff.nf'
 include {download_bakta_db} from './modules/download_bakta_db.nf'
@@ -26,8 +22,13 @@ include {merge_gene_stats} from './modules/merge_gene_stats.nf'
 include {build_site_stats} from './modules/build_site_stats.nf'
 include {merge_reference} from './modules/merge_reference.nf'
 
-bakta_db = Channel.value(params.bakta_db)
 workflow {
+
+    sample_genomes = Channel.fromPath("$params.input_dir/*.fasta")
+    reference_genome = Channel.value(params.reference_fasta)
+    reference_gff = Channel.value(params.reference_gff)
+    bakta_db = Channel.value(params.bakta_db)
+
     if (params.reference_fasta && params.reference_gff) {
         liftoff_db = build_liftoff_db(reference_gff)
         annotated_genomes = liftoff(liftoff_db, reference_genome, sample_genomes.mix(reference_genome))
@@ -40,7 +41,7 @@ workflow {
         }
         annotated_genomes = bakta(sample_genomes, bakta_db)
     }
-    (ppanggolin_matrix, all_genes_nuc, all_genes_prot) = ppanggolin(annotated_genomes.collect())
+    (ppanggolin_matrix, all_genes_nuc) = ppanggolin(annotated_genomes.collect())
     reformatted_matrix = reformat_matrix(ppanggolin_matrix)
     (gene_families_nuc, gene_families_prot, ambig_filter_counts, stop_filter_counts)  = build_gene_families(reformatted_matrix, all_genes_nuc)
     gene_families_msa = mafft(gene_families_prot.flatten())

@@ -6,7 +6,7 @@ process remove_duplicate_sequences {
     tuple val(index), path(msa)
 
     output:
-    tuple val(index), path("${msa.name}.no_dups") optional true
+    tuple val(index), path("${msa.name}.no_dups"), optional: true
     path "${index}_dups_filter_counts.tsv"
 
     script:
